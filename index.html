@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Social Media with no AI Slop</title>
+    <title>InstaMedia</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -36,15 +36,15 @@
 
     <!-- Top Header Overlay -->
     <div class="fixed top-0 left-0 right-0 z-30 flex justify-between items-center px-4 py-3 bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
-        <h1 class="font-bold text-lg tracking-wider text-rose-500">HUMAN//FEED</h1>
-        <div class="text-xs bg-zinc-800/80 px-2 py-1 rounded-full text-zinc-300 border border-zinc-700 pointer-events-auto">
-            AI Slop Deleted
+        <h1 class="font-extrabold text-lg tracking-wider text-rose-500">INSTAMEDIA</h1>
+        <div class="flex items-center gap-2 pointer-events-auto">
+            <span id="current-user-badge" class="text-xs bg-zinc-800 px-2.5 py-1 rounded-full text-zinc-300 border border-zinc-700 hidden">Not Logged In</span>
+            <button onclick="openAuthModal()" id="auth-btn-text" class="text-xs bg-rose-600 px-3 py-1 rounded-full text-white font-medium shadow">Sign In</button>
         </div>
     </div>
 
     <!-- TikTok Style Full-Screen Vertical Feed -->
     <div id="feed-container" class="snap-container">
-        <!-- Dynamic posts will load here -->
         <div class="snap-item flex items-center justify-center text-zinc-500">
             Connecting to Supabase...
         </div>
@@ -55,13 +55,30 @@
         +
     </button>
 
+    <!-- Auth / Account Modal (No Email Needed) -->
+    <div id="auth-modal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-zinc-900 border border-zinc-800 w-full max-w-md rounded-2xl p-5 relative">
+            <h2 class="text-lg font-bold mb-1 text-rose-500">InstaMedia Account</h2>
+            <p class="text-xs text-zinc-400 mb-4">No email required. Pick a username and password to log in instantly without blocks.</p>
+            
+            <input type="text" id="auth-username" placeholder="Username" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white focus:outline-none focus:border-rose-600 placeholder-zinc-600 text-sm mb-3">
+            <input type="password" id="auth-password" placeholder="Password" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white focus:outline-none focus:border-rose-600 placeholder-zinc-600 text-sm mb-3">
+            
+            <div id="auth-error" class="mb-3 hidden bg-red-950/80 border border-red-800 text-red-200 text-xs p-3 rounded-xl"></div>
+
+            <div class="flex flex-col gap-2">
+                <button onclick="handleAuth()" class="w-full py-3 rounded-xl bg-rose-600 text-white text-sm hover:bg-rose-500 font-medium">Continue</button>
+                <button onclick="closeAuthModal()" class="w-full py-2 rounded-xl bg-zinc-800 text-zinc-300 text-sm hover:bg-zinc-700">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Post Creation Modal -->
     <div id="post-modal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4">
         <div class="bg-zinc-900 border border-zinc-800 w-full max-w-md rounded-2xl p-5 relative">
             <h2 class="text-lg font-bold mb-3 text-rose-500">Create Human Post</h2>
             <p class="text-xs text-zinc-400 mb-3">Posts containing AI buzzwords (e.g. "delve", "testament", "tapestry", "revolutionize") will be automatically rejected and deleted.</p>
             <textarea id="post-content" rows="4" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white focus:outline-none focus:border-rose-600 placeholder-zinc-600 text-sm" placeholder="Write something real..."></textarea>
-            <input type="text" id="post-author" placeholder="Your Name / Handle" class="w-full mt-3 bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white focus:outline-none focus:border-rose-600 placeholder-zinc-600 text-sm">
             
             <div id="error-banner" class="mt-3 hidden bg-red-950/80 border border-red-800 text-red-200 text-xs p-3 rounded-xl"></div>
 
@@ -73,12 +90,25 @@
     </div>
 
     <script>
-        // Supabase Initialization using your provided keys
         const SUPABASE_URL = "https://seryrxjpieeqkgovpsgi.supabase.co";
         const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_X-7M-jh786pow0K9hwl0vQ_5DWIlGVD";
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-        // Strict AI-Slop Buzzer List
+        let currentUser = localStorage.getItem('instamedia_user') || null;
+
+        function updateAuthUI() {
+            const badge = document.getElementById('current-user-badge');
+            const btnText = document.getElementById('auth-btn-text');
+            if (currentUser) {
+                badge.textContent = `@${currentUser}`;
+                badge.classList.remove('hidden');
+                btnText.textContent = "Switch";
+            } else {
+                badge.classList.add('hidden');
+                btnText.textContent = "Sign In";
+            }
+        }
+
         const AI_BUZZWORDS = [
             "delve", "testament", "tapestry", "revolutionize", "beacon", 
             "furthermore", "in conclusion", "realm", "delve into", "paramount", 
@@ -98,12 +128,12 @@
                 .order('created_at', { ascending: false });
 
             if (error) {
-                container.innerHTML = `<div class="snap-item flex flex-col items-center justify-center p-6 text-center text-red-400">Error loading feed: ${error.message}</div>`;
+                container.innerHTML = `<div class="snap-item flex flex-col items-center justify-center p-6 text-center text-red-400">Database Error: Make sure you ran the SQL setup script in Supabase! (${error.message})</div>`;
                 return;
             }
 
             if (!data || data.length === 0) {
-                container.innerHTML = `<div class="snap-item flex flex-col items-center justify-center p-6 text-center text-zinc-500">No posts yet. Be the first human to post!</div>`;
+                container.innerHTML = `<div class="snap-item flex flex-col items-center justify-center p-6 text-center text-zinc-500">No posts yet. Be the first human to post on InstaMedia!</div>`;
                 return;
             }
 
@@ -124,7 +154,68 @@
             `).join('');
         }
 
+        function openAuthModal() {
+            document.getElementById('auth-modal').classList.remove('hidden');
+            document.getElementById('auth-error').classList.add('hidden');
+        }
+
+        function closeAuthModal() {
+            document.getElementById('auth-modal').classList.add('hidden');
+        }
+
+        async function handleAuth() {
+            const username = document.getElementById('auth-username').value.trim();
+            const password = document.getElementById('auth-password').value.trim();
+            const errorDiv = document.getElementById('auth-error');
+
+            if (!username || !password) {
+                errorDiv.textContent = "Please fill in both fields.";
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            const { data: existingUser } = await supabaseClient
+                .from('users')
+                .select('*')
+                .eq('username', username)
+                .single();
+
+            if (existingUser) {
+                if (existingUser.password === password) {
+                    currentUser = username;
+                    localStorage.setItem('instamedia_user', currentUser);
+                    updateAuthUI();
+                    closeAuthModal();
+                    fetchPosts();
+                } else {
+                    errorDiv.textContent = "Incorrect password for this username.";
+                    errorDiv.classList.remove('hidden');
+                }
+            } else {
+                const { error } = await supabaseClient
+                    .from('users')
+                    .insert([{ username, password }]);
+
+                if (error) {
+                    errorDiv.textContent = "Error creating account: " + error.message;
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+
+                currentUser = username;
+                localStorage.setItem('instamedia_user', currentUser);
+                updateAuthUI();
+                closeAuthModal();
+                fetchPosts();
+            }
+        }
+
         function openPostModal() {
+            if (!currentUser) {
+                alert("Please sign in with a username first!");
+                openAuthModal();
+                return;
+            }
             document.getElementById('post-modal').classList.remove('hidden');
             document.getElementById('error-banner').classList.add('hidden');
         }
@@ -135,7 +226,6 @@
 
         async function submitPost() {
             const content = document.getElementById('post-content').value.trim();
-            const author = document.getElementById('post-author').value.trim() || 'Anonymous';
             const errorBanner = document.getElementById('error-banner');
 
             if (!content) {
@@ -144,19 +234,16 @@
                 return;
             }
 
-            // Client-side AI-Slop Check & Instant Delete/Block
             if (isAISlop(content)) {
                 errorBanner.textContent = "🚫 AI-Slop Detected! This post contains synthetic buzzwords and was automatically blocked/deleted.";
                 errorBanner.classList.remove('hidden');
-                // Auto clear text box to enforce deletion
                 document.getElementById('post-content').value = "";
                 return;
             }
 
-            // Save to Supabase DB
             const { error } = await supabaseClient
                 .from('posts')
-                .insert([{ content, author, likes: 0 }]);
+                .insert([{ content, author: currentUser, likes: 0 }]);
 
             if (error) {
                 errorBanner.textContent = "Database error: " + error.message;
@@ -166,7 +253,6 @@
 
             closePostModal();
             document.getElementById('post-content').value = '';
-            document.getElementById('post-author').value = '';
             fetchPosts();
         }
 
@@ -182,7 +268,7 @@
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
-        // Initial load
+        updateAuthUI();
         fetchPosts();
     </script>
 </body>
