@@ -34,19 +34,32 @@
 </head>
 <body class="bg-black text-white">
 
-    <!-- Top Header Overlay -->
-    <div class="fixed top-0 left-0 right-0 z-30 flex justify-between items-center px-4 py-3 bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
-        <h1 class="font-extrabold text-lg tracking-wider text-rose-500">INSTAMEDIA</h1>
+    <!-- Top Header Overlay (TikTok/Facebook Hybrid Nav) -->
+    <div class="fixed top-0 left-0 right-0 z-30 flex justify-between items-center px-4 py-3 bg-gradient-to-b from-black/90 to-transparent pointer-events-none">
+        <div class="flex items-center gap-3 pointer-events-auto">
+            <h1 class="font-extrabold text-lg tracking-wider text-rose-500">INSTAMEDIA</h1>
+            <div class="flex bg-zinc-900/80 border border-zinc-800 rounded-full p-0.5 text-xs">
+                <button onclick="switchTab('feed')" id="tab-feed" class="px-3 py-1 rounded-full bg-rose-600 text-white font-medium transition">Reels</button>
+                <button onclick="switchTab('wall')" id="tab-wall" class="px-3 py-1 rounded-full text-zinc-400 transition">Community</button>
+            </div>
+        </div>
         <div class="flex items-center gap-2 pointer-events-auto">
-            <span id="current-user-badge" class="text-xs bg-zinc-800 px-2.5 py-1 rounded-full text-zinc-300 border border-zinc-700 hidden">Not Logged In</span>
+            <span id="current-user-badge" class="text-xs bg-zinc-800 px-2.5 py-1 rounded-full text-zinc-300 border border-zinc-700 hidden"></span>
             <button onclick="openAuthModal()" id="auth-btn-text" class="text-xs bg-rose-600 px-3 py-1 rounded-full text-white font-medium shadow">Sign In</button>
         </div>
     </div>
 
-    <!-- TikTok Style Full-Screen Vertical Feed -->
-    <div id="feed-container" class="snap-container">
+    <!-- View 1: TikTok Style Vertical Reels Feed -->
+    <div id="view-feed" class="snap-container">
         <div class="snap-item flex items-center justify-center text-zinc-500">
-            Connecting to Supabase...
+            Loading InstaMedia Reels...
+        </div>
+    </div>
+
+    <!-- View 2: Facebook Style Community Wall Feed (Hidden by default) -->
+    <div id="view-wall" class="snap-container hidden pt-16 px-4 pb-24 overflow-y-auto">
+        <div id="wall-container" class="max-w-xl mx-auto space-y-4">
+            <!-- Community Wall Cards Loaded Dynamically -->
         </div>
     </div>
 
@@ -55,10 +68,25 @@
         +
     </button>
 
+    <!-- Comments Drawer (Facebook Style Discussion) -->
+    <div id="comments-modal" class="fixed inset-x-0 bottom-0 z-50 bg-zinc-900 border-t border-zinc-800 rounded-t-3xl p-5 max-h-[75vh] flex flex-col transform translate-y-full transition-transform duration-300">
+        <div class="flex justify-between items-center mb-3">
+            <h3 class="font-bold text-sm text-rose-500">Comments & Discussion</h3>
+            <button onclick="closeComments()" class="text-zinc-400 hover:text-white text-sm font-bold px-2">✕</button>
+        </div>
+        <div id="comments-list" class="overflow-y-auto flex-1 space-y-3 pr-1 mb-3 text-sm">
+            <!-- Comments load here -->
+        </div>
+        <div class="flex gap-2 pt-2 border-t border-zinc-800">
+            <input type="text" id="comment-input" placeholder="Write a human comment..." class="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-600">
+            <button onclick="submitComment()" class="bg-rose-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-rose-500">Send</button>
+        </div>
+    </div>
+
     <!-- Auth / Account Modal (No Email Needed) -->
     <div id="auth-modal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4">
         <div class="bg-zinc-900 border border-zinc-800 w-full max-w-md rounded-2xl p-5 relative">
-            <h2 class="text-lg font-bold mb-1 text-rose-500">InstaMedia Account</h2>
+            <h2 class="text-lg font-bold mb-1 text-rose-500">Instamedia Account</h2>
             <p class="text-xs text-zinc-400 mb-4">No email required. Pick a username and password to log in instantly without blocks.</p>
             
             <input type="text" id="auth-username" placeholder="Username" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white focus:outline-none focus:border-rose-600 placeholder-zinc-600 text-sm mb-3">
@@ -84,7 +112,7 @@
 
             <div class="flex justify-end gap-3 mt-4">
                 <button onclick="closePostModal()" class="px-4 py-2 rounded-xl bg-zinc-800 text-zinc-300 text-sm hover:bg-zinc-700">Cancel</button>
-                <button onclick="submitPost()" class="px-4 py-2 rounded-xl bg-rose-600 text-white text-sm hover:bg-rose-500 font-medium">Post to Feed</button>
+                <button onclick="submitPost()" class="px-4 py-2 rounded-xl bg-rose-600 text-white text-sm hover:bg-rose-500 font-medium">Post</button>
             </div>
         </div>
     </div>
@@ -95,6 +123,8 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
         let currentUser = localStorage.getItem('instamedia_user') || null;
+        let activePostId = null;
+        let currentTab = 'feed';
 
         function updateAuthUI() {
             const badge = document.getElementById('current-user-badge');
@@ -106,6 +136,27 @@
             } else {
                 badge.classList.add('hidden');
                 btnText.textContent = "Sign In";
+            }
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            const feedView = document.getElementById('view-feed');
+            const wallView = document.getElementById('view-wall');
+            const btnFeed = document.getElementById('tab-feed');
+            const btnWall = document.getElementById('tab-wall');
+
+            if (tab === 'feed') {
+                feedView.classList.remove('hidden');
+                wallView.classList.add('hidden');
+                btnFeed.className = "px-3 py-1 rounded-full bg-rose-600 text-white font-medium transition";
+                btnWall.className = "px-3 py-1 rounded-full text-zinc-400 transition";
+            } else {
+                feedView.classList.add('hidden');
+                wallView.classList.remove('hidden');
+                btnWall.className = "px-3 py-1 rounded-full bg-rose-600 text-white font-medium transition";
+                btnFeed.className = "px-3 py-1 rounded-full text-zinc-400 transition";
+                fetchWallPosts();
             }
         }
 
@@ -121,14 +172,14 @@
         }
 
         async function fetchPosts() {
-            const container = document.getElementById('feed-container');
+            const container = document.getElementById('view-feed');
             const { data, error } = await supabaseClient
                 .from('posts')
                 .select('*')
                 .order('created_at', { ascending: false });
 
             if (error) {
-                container.innerHTML = `<div class="snap-item flex flex-col items-center justify-center p-6 text-center text-red-400">Database Error: Make sure you ran the SQL setup script in Supabase! (${error.message})</div>`;
+                container.innerHTML = `<div class="snap-item flex flex-col items-center justify-center p-6 text-center text-red-400">Database Error: Make sure your SQL tables are created! (${error.message})</div>`;
                 return;
             }
 
@@ -149,9 +200,101 @@
                             <div class="w-12 h-12 bg-zinc-900/80 backdrop-blur border border-zinc-800 rounded-full flex items-center justify-center text-xl active:scale-90 transition">❤️</div>
                             <span class="text-xs mt-1 text-zinc-300">${post.likes || 0}</span>
                         </button>
+                        <button onclick="openComments('${post.id}')" class="flex flex-col items-center text-white">
+                            <div class="w-12 h-12 bg-zinc-900/80 backdrop-blur border border-zinc-800 rounded-full flex items-center justify-center text-xl active:scale-90 transition">💬</div>
+                            <span class="text-xs mt-1 text-zinc-300">Chat</span>
+                        </button>
                     </div>
                 </div>
             `).join('');
+        }
+
+        async function fetchWallPosts() {
+            const container = document.getElementById('wall-container');
+            const { data, error } = await supabaseClient
+                .from('posts')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error || !data) {
+                container.innerHTML = `<div class="text-center text-zinc-500">Error loading community wall.</div>`;
+                return;
+            }
+
+            container.innerHTML = data.map(post => `
+                <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-rose-500 font-bold text-sm">@${escapeHtml(post.author || 'anonymous')}</span>
+                        <span class="text-xs text-zinc-500">${new Date(post.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <p class="text-zinc-200 text-sm leading-relaxed">${escapeHtml(post.content)}</p>
+                    <div class="flex gap-4 pt-2 border-t border-zinc-800 text-xs text-zinc-400">
+                        <button onclick="likePost('${post.id}', ${post.likes || 0})" class="hover:text-white">❤️ ${post.likes || 0} Likes</button>
+                        <button onclick="openComments('${post.id}')" class="hover:text-white">💬 Comments</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function openComments(postId) {
+            activePostId = postId;
+            const modal = document.getElementById('comments-modal');
+            modal.classList.remove('translate-y-full');
+            loadComments(postId);
+        }
+
+        function closeComments() {
+            document.getElementById('comments-modal').classList.add('translate-y-full');
+            activePostId = null;
+        }
+
+        async function loadComments(postId) {
+            const list = document.getElementById('comments-list');
+            list.innerHTML = `<div class="text-zinc-500 text-center py-4">Loading comments...</div>`;
+            
+            const { data, error } = await supabaseClient
+                .from('comments')
+                .select('*')
+                .eq('post_id', postId)
+                .order('created_at', { ascending: true });
+
+            if (error || !data || data.length === 0) {
+                list.innerHTML = `<div class="text-zinc-500 text-center py-4">No comments yet. Start the conversation!</div>`;
+                return;
+            }
+
+            list.innerHTML = data.map(c => `
+                <div class="bg-zinc-950 p-2.5 rounded-xl border border-zinc-800">
+                    <span class="text-rose-500 font-bold text-xs">@${escapeHtml(c.author)}</span>
+                    <p class="text-zinc-300 text-xs mt-1">${escapeHtml(c.content)}</p>
+                </div>
+            `).join('');
+        }
+
+        async function submitComment() {
+            if (!currentUser) {
+                alert("Please sign in first!");
+                openAuthModal();
+                return;
+            }
+            const input = document.getElementById('comment-input');
+            const content = input.value.trim();
+            if (!content || !activePostId) return;
+
+            if (isAISlop(content)) {
+                alert("🚫 AI-Slop Detected in comment! Automatically deleted.");
+                input.value = "";
+                return;
+            }
+
+            await supabaseClient.from('comments').insert([{
+                post_id: activePostId,
+                author: currentUser,
+                content: content
+            }]);
+
+            input.value = '';
+            loadComments(activePostId);
         }
 
         function openAuthModal() {
@@ -186,9 +329,9 @@
                     localStorage.setItem('instamedia_user', currentUser);
                     updateAuthUI();
                     closeAuthModal();
-                    fetchPosts();
+                    if(currentTab === 'feed') fetchPosts(); else fetchWallPosts();
                 } else {
-                    errorDiv.textContent = "Incorrect password for this username.";
+                    errorDiv.textContent = "Incorrect password.";
                     errorDiv.classList.remove('hidden');
                 }
             } else {
@@ -197,7 +340,7 @@
                     .insert([{ username, password }]);
 
                 if (error) {
-                    errorDiv.textContent = "Error creating account: " + error.message;
+                    errorDiv.textContent = "Error: " + error.message;
                     errorDiv.classList.remove('hidden');
                     return;
                 }
@@ -206,7 +349,7 @@
                 localStorage.setItem('instamedia_user', currentUser);
                 updateAuthUI();
                 closeAuthModal();
-                fetchPosts();
+                if(currentTab === 'feed') fetchPosts(); else fetchWallPosts();
             }
         }
 
@@ -253,7 +396,7 @@
 
             closePostModal();
             document.getElementById('post-content').value = '';
-            fetchPosts();
+            if(currentTab === 'feed') fetchPosts(); else fetchWallPosts();
         }
 
         async function likePost(id, currentLikes) {
@@ -261,7 +404,7 @@
                 .from('posts')
                 .update({ likes: currentLikes + 1 })
                 .eq('id', id);
-            fetchPosts();
+            if(currentTab === 'feed') fetchPosts(); else fetchWallPosts();
         }
 
         function escapeHtml(str) {
