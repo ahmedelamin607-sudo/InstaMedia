@@ -34,7 +34,7 @@
 </head>
 <body class="bg-black text-white">
 
-    <!-- Top Header Overlay (TikTok/Facebook Hybrid Nav) -->
+    <!-- Top Header Overlay -->
     <div class="fixed top-0 left-0 right-0 z-30 flex justify-between items-center px-4 py-3 bg-gradient-to-b from-black/90 to-transparent pointer-events-none">
         <div class="flex items-center gap-3 pointer-events-auto">
             <h1 class="font-extrabold text-lg tracking-wider text-rose-500">INSTAMEDIA</h1>
@@ -56,7 +56,7 @@
         </div>
     </div>
 
-    <!-- View 2: Facebook Style Community Wall Feed (Hidden by default) -->
+    <!-- View 2: Facebook Style Community Wall Feed -->
     <div id="view-wall" class="snap-container hidden pt-16 px-4 pb-24 overflow-y-auto">
         <div id="wall-container" class="max-w-xl mx-auto space-y-4">
             <!-- Community Wall Cards Loaded Dynamically -->
@@ -68,7 +68,7 @@
         +
     </button>
 
-    <!-- Comments Drawer (Facebook Style Discussion) -->
+    <!-- Comments Drawer -->
     <div id="comments-modal" class="fixed inset-x-0 bottom-0 z-50 bg-zinc-900 border-t border-zinc-800 rounded-t-3xl p-5 max-h-[75vh] flex flex-col transform translate-y-full transition-transform duration-300">
         <div class="flex justify-between items-center mb-3">
             <h3 class="font-bold text-sm text-rose-500">Comments & Discussion</h3>
@@ -83,36 +83,42 @@
         </div>
     </div>
 
-    <!-- Auth / Account Modal (No Email Needed) -->
+    <!-- Supabase Email Auth Modal -->
     <div id="auth-modal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4">
         <div class="bg-zinc-900 border border-zinc-800 w-full max-w-md rounded-2xl p-5 relative">
-            <h2 class="text-lg font-bold mb-1 text-rose-500">Instamedia Account</h2>
-            <p class="text-xs text-zinc-400 mb-4">No email required. Pick a username and password to log in instantly without blocks.</p>
+            <h2 class="text-lg font-bold mb-1 text-rose-500">Instamedia Account (Email)</h2>
+            <p class="text-xs text-zinc-400 mb-4">Sign in or create an account using your email address and password.</p>
             
-            <input type="text" id="auth-username" placeholder="Username" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white focus:outline-none focus:border-rose-600 placeholder-zinc-600 text-sm mb-3">
+            <input type="email" id="auth-email" placeholder="Email address" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white focus:outline-none focus:border-rose-600 placeholder-zinc-600 text-sm mb-3">
             <input type="password" id="auth-password" placeholder="Password" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white focus:outline-none focus:border-rose-600 placeholder-zinc-600 text-sm mb-3">
             
             <div id="auth-error" class="mb-3 hidden bg-red-950/80 border border-red-800 text-red-200 text-xs p-3 rounded-xl"></div>
 
             <div class="flex flex-col gap-2">
-                <button onclick="handleAuth()" class="w-full py-3 rounded-xl bg-rose-600 text-white text-sm hover:bg-rose-500 font-medium">Continue</button>
-                <button onclick="closeAuthModal()" class="w-full py-2 rounded-xl bg-zinc-800 text-zinc-300 text-sm hover:bg-zinc-700">Cancel</button>
+                <button onclick="handleEmailSignIn()" class="w-full py-3 rounded-xl bg-rose-600 text-white text-sm hover:bg-rose-500 font-medium">Sign In</button>
+                <button onclick="handleEmailSignUp()" class="w-full py-2.5 rounded-xl bg-zinc-800 text-zinc-200 text-sm hover:bg-zinc-700 font-medium">Create Account (Sign Up)</button>
+                <button onclick="closeAuthModal()" class="w-full py-2 rounded-xl bg-transparent text-zinc-500 text-xs hover:text-zinc-300">Cancel</button>
             </div>
         </div>
     </div>
 
-    <!-- Post Creation Modal -->
+    <!-- Post Creation Modal (With Video Upload & Type Validation) -->
     <div id="post-modal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-4">
         <div class="bg-zinc-900 border border-zinc-800 w-full max-w-md rounded-2xl p-5 relative">
-            <h2 class="text-lg font-bold mb-3 text-rose-500">Create Human Post</h2>
-            <p class="text-xs text-zinc-400 mb-3">Posts containing AI buzzwords (e.g. "delve", "testament", "tapestry", "revolutionize") will be automatically rejected and deleted.</p>
-            <textarea id="post-content" rows="4" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white focus:outline-none focus:border-rose-600 placeholder-zinc-600 text-sm" placeholder="Write something real..."></textarea>
+            <h2 class="text-lg font-bold mb-3 text-rose-500">Upload Reel & Post</h2>
+            <p class="text-xs text-zinc-400 mb-3">AI-slop buzzwords will be automatically blocked. Attach an MP4, WebM, or MOV video file.</p>
             
+            <textarea id="post-content" rows="3" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white focus:outline-none focus:border-rose-600 placeholder-zinc-600 text-sm mb-3" placeholder="Write a caption..."></textarea>
+            
+            <label class="block text-xs font-medium text-zinc-400 mb-1">Select Video File (.mp4, .webm, .mov)</label>
+            <input type="file" id="post-video-file" accept="video/mp4,video/webm,video/quicktime,video/ogg" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2 text-zinc-300 text-xs mb-3 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-rose-600 file:text-white hover:file:bg-rose-500">
+
+            <div id="upload-progress" class="text-xs text-rose-400 mb-3 hidden">Uploading video to Supabase Storage...</div>
             <div id="error-banner" class="mt-3 hidden bg-red-950/80 border border-red-800 text-red-200 text-xs p-3 rounded-xl"></div>
 
             <div class="flex justify-end gap-3 mt-4">
                 <button onclick="closePostModal()" class="px-4 py-2 rounded-xl bg-zinc-800 text-zinc-300 text-sm hover:bg-zinc-700">Cancel</button>
-                <button onclick="submitPost()" class="px-4 py-2 rounded-xl bg-rose-600 text-white text-sm hover:bg-rose-500 font-medium">Post</button>
+                <button onclick="submitPost()" class="px-4 py-2 rounded-xl bg-rose-600 text-white text-sm hover:bg-rose-500 font-medium">Publish Reel</button>
             </div>
         </div>
     </div>
@@ -122,17 +128,26 @@
         const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_X-7M-jh786pow0K9hwl0vQ_5DWIlGVD";
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-        let currentUser = localStorage.getItem('instamedia_user') || null;
+        let currentUser = null;
         let activePostId = null;
         let currentTab = 'feed';
+
+        // Check active session on load
+        async function checkUserSession() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session && session.user) {
+                currentUser = session.user.email;
+                updateAuthUI();
+            }
+        }
 
         function updateAuthUI() {
             const badge = document.getElementById('current-user-badge');
             const btnText = document.getElementById('auth-btn-text');
             if (currentUser) {
-                badge.textContent = `@${currentUser}`;
+                badge.textContent = currentUser;
                 badge.classList.remove('hidden');
-                btnText.textContent = "Switch";
+                btnText.textContent = "Sign Out";
             } else {
                 badge.classList.add('hidden');
                 btnText.textContent = "Sign In";
@@ -184,15 +199,16 @@
             }
 
             if (!data || data.length === 0) {
-                container.innerHTML = `<div class="snap-item flex flex-col items-center justify-center p-6 text-center text-zinc-500">No posts yet. Be the first human to post on InstaMedia!</div>`;
+                container.innerHTML = `<div class="snap-item flex flex-col items-center justify-center p-6 text-center text-zinc-500">No reels yet. Be the first human to upload!</div>`;
                 return;
             }
 
             container.innerHTML = data.map(post => `
                 <div class="snap-item flex flex-col justify-end p-6 pb-16 relative bg-zinc-950">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/30 pointer-events-none"></div>
+                    ${post.video_url ? `<video src="${post.video_url}" class="absolute inset-0 w-full h-full object-cover" autoplay loop muted playsinline></video>` : ''}
+                    <div class="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-black/30 pointer-events-none"></div>
                     <div class="relative z-10 max-w-lg">
-                        <span class="text-rose-500 font-bold text-sm">@${escapeHtml(post.author || 'anonymous')}</span>
+                        <span class="text-rose-500 font-bold text-sm">${escapeHtml(post.author || 'anonymous')}</span>
                         <p class="text-lg mt-2 leading-relaxed text-zinc-100">${escapeHtml(post.content)}</p>
                     </div>
                     <div class="absolute right-4 bottom-20 z-10 flex flex-col items-center gap-4">
@@ -224,9 +240,10 @@
             container.innerHTML = data.map(post => `
                 <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-2">
                     <div class="flex justify-between items-center">
-                        <span class="text-rose-500 font-bold text-sm">@${escapeHtml(post.author || 'anonymous')}</span>
+                        <span class="text-rose-500 font-bold text-sm">${escapeHtml(post.author || 'anonymous')}</span>
                         <span class="text-xs text-zinc-500">${new Date(post.created_at).toLocaleDateString()}</span>
                     </div>
+                    ${post.video_url ? `<video src="${post.video_url}" class="w-full h-48 object-cover rounded-xl mt-2" controls></video>` : ''}
                     <p class="text-zinc-200 text-sm leading-relaxed">${escapeHtml(post.content)}</p>
                     <div class="flex gap-4 pt-2 border-t border-zinc-800 text-xs text-zinc-400">
                         <button onclick="likePost('${post.id}', ${post.likes || 0})" class="hover:text-white">❤️ ${post.likes || 0} Likes</button>
@@ -238,8 +255,7 @@
 
         async function openComments(postId) {
             activePostId = postId;
-            const modal = document.getElementById('comments-modal');
-            modal.classList.remove('translate-y-full');
+            document.getElementById('comments-modal').classList.remove('translate-y-full');
             loadComments(postId);
         }
 
@@ -265,7 +281,7 @@
 
             list.innerHTML = data.map(c => `
                 <div class="bg-zinc-950 p-2.5 rounded-xl border border-zinc-800">
-                    <span class="text-rose-500 font-bold text-xs">@${escapeHtml(c.author)}</span>
+                    <span class="text-rose-500 font-bold text-xs">${escapeHtml(c.author)}</span>
                     <p class="text-zinc-300 text-xs mt-1">${escapeHtml(c.content)}</p>
                 </div>
             `).join('');
@@ -298,6 +314,14 @@
         }
 
         function openAuthModal() {
+            if (currentUser) {
+                supabaseClient.auth.signOut().then(() => {
+                    currentUser = null;
+                    updateAuthUI();
+                    alert("Signed out successfully.");
+                });
+                return;
+            }
             document.getElementById('auth-modal').classList.remove('hidden');
             document.getElementById('auth-error').classList.add('hidden');
         }
@@ -306,61 +330,60 @@
             document.getElementById('auth-modal').classList.add('hidden');
         }
 
-        async function handleAuth() {
-            const username = document.getElementById('auth-username').value.trim();
+        async function handleEmailSignIn() {
+            const email = document.getElementById('auth-email').value.trim();
             const password = document.getElementById('auth-password').value.trim();
             const errorDiv = document.getElementById('auth-error');
 
-            if (!username || !password) {
-                errorDiv.textContent = "Please fill in both fields.";
+            if (!email || !password) {
+                errorDiv.textContent = "Please fill in email and password.";
                 errorDiv.classList.remove('hidden');
                 return;
             }
 
-            const { data: existingUser } = await supabaseClient
-                .from('users')
-                .select('*')
-                .eq('username', username)
-                .single();
-
-            if (existingUser) {
-                if (existingUser.password === password) {
-                    currentUser = username;
-                    localStorage.setItem('instamedia_user', currentUser);
-                    updateAuthUI();
-                    closeAuthModal();
-                    if(currentTab === 'feed') fetchPosts(); else fetchWallPosts();
-                } else {
-                    errorDiv.textContent = "Incorrect password.";
-                    errorDiv.classList.remove('hidden');
-                }
-            } else {
-                const { error } = await supabaseClient
-                    .from('users')
-                    .insert([{ username, password }]);
-
-                if (error) {
-                    errorDiv.textContent = "Error: " + error.message;
-                    errorDiv.classList.remove('hidden');
-                    return;
-                }
-
-                currentUser = username;
-                localStorage.setItem('instamedia_user', currentUser);
-                updateAuthUI();
-                closeAuthModal();
-                if(currentTab === 'feed') fetchPosts(); else fetchWallPosts();
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            if (error) {
+                errorDiv.textContent = error.message;
+                errorDiv.classList.remove('hidden');
+                return;
             }
+
+            currentUser = data.user.email;
+            updateAuthUI();
+            closeAuthModal();
+            if(currentTab === 'feed') fetchPosts(); else fetchWallPosts();
+        }
+
+        async function handleEmailSignUp() {
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value.trim();
+            const errorDiv = document.getElementById('auth-error');
+
+            if (!email || !password) {
+                errorDiv.textContent = "Please fill in email and password.";
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            const { data, error } = await supabaseClient.auth.signUp({ email, password });
+            if (error) {
+                errorDiv.textContent = error.message;
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            alert("Account created! You can now sign in.");
         }
 
         function openPostModal() {
             if (!currentUser) {
-                alert("Please sign in with a username first!");
+                alert("Please sign in with your email first!");
                 openAuthModal();
                 return;
             }
             document.getElementById('post-modal').classList.remove('hidden');
             document.getElementById('error-banner').classList.add('hidden');
+            document.getElementById('upload-progress').classList.add('hidden');
         }
 
         function closePostModal() {
@@ -369,10 +392,12 @@
 
         async function submitPost() {
             const content = document.getElementById('post-content').value.trim();
+            const videoFileInput = document.getElementById('post-video-file');
             const errorBanner = document.getElementById('error-banner');
+            const progressIndicator = document.getElementById('upload-progress');
 
-            if (!content) {
-                errorBanner.textContent = "Please write something before posting.";
+            if (!content && videoFileInput.files.length === 0) {
+                errorBanner.textContent = "Please add text or a video file.";
                 errorBanner.classList.remove('hidden');
                 return;
             }
@@ -384,18 +409,51 @@
                 return;
             }
 
+            let videoUrl = null;
+
+            if (videoFileInput.files.length > 0) {
+                const file = videoFileInput.files[0];
+                const validTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/ogg'];
+                if (!validTypes.includes(file.type)) {
+                    errorBanner.textContent = "Invalid video format. Please upload an MP4, WebM, or MOV file.";
+                    errorBanner.classList.remove('hidden');
+                    return;
+                }
+
+                progressIndicator.classList.remove('hidden');
+                const fileName = `${Date.now()}_${file.name}`;
+                const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                    .from('videos')
+                    .upload(fileName, file);
+
+                if (uploadError) {
+                    errorBanner.textContent = "Video upload error: " + uploadError.message;
+                    errorBanner.classList.remove('hidden');
+                    progressIndicator.classList.add('hidden');
+                    return;
+                }
+
+                const { data: publicUrlData } = supabaseClient.storage
+                    .from('videos')
+                    .getPublicUrl(fileName);
+
+                videoUrl = publicUrlData.publicUrl;
+            }
+
             const { error } = await supabaseClient
                 .from('posts')
-                .insert([{ content, author: currentUser, likes: 0 }]);
+                .insert([{ content, video_url: videoUrl, author: currentUser, likes: 0 }]);
 
             if (error) {
                 errorBanner.textContent = "Database error: " + error.message;
                 errorBanner.classList.remove('hidden');
+                progressIndicator.classList.add('hidden');
                 return;
             }
 
             closePostModal();
             document.getElementById('post-content').value = '';
+            videoFileInput.value = '';
             if(currentTab === 'feed') fetchPosts(); else fetchWallPosts();
         }
 
@@ -411,7 +469,7 @@
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
-        updateAuthUI();
+        checkUserSession();
         fetchPosts();
     </script>
 </body>
